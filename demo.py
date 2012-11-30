@@ -1,97 +1,73 @@
+''' 
+Demonstrates aggregating positions across multiple accounts. 
+
+The demo method will create several trades for user fralcody in each
+of his accounts and then output the aggregate positions list. 
+
+To execute, run the command:
+
+python demo.py [loglevel]
+
+where loglevel is an optional argument. There are three valid loglevels:
+
+1 - default log level, will only output aggregate positions list
+2 - additionally output positions for each account 
+3 - additionally output trades as they are created
 '''
-Provides functionality for making requests to api-sandbox.oanda.com, and
-aggregating positions held by a user across multiple accounts. See demo.py
-for executing a demonstration of this code.
-'''
 
-import httplib, json
+from aggregate_positions import aggregate_positions, sandbox_request
+import sys
+import json
+import urllib
+import random
 
-def sandbox_request(method, uri, body=None):
-    ''' 
-    Make a request to the OANDA api on api-sandbox.
+instruments = ["EUR/USD","USD/CAD"]
+directions = ["long","short"]
 
-    method - GET, POST, POST, or DELETE
-    uri - request uri 
-    body - optional body for POST requests
-    ''' 
-    conn = httplib.HTTPConnection("api-sandbox.oanda.com")
-    if body is not None: conn.request(method,uri,body)
-    else: conn.request(method,uri)
-    r1 = conn.getresponse()
-    data = r1.read()
-    if r1.status == 200:
-        return json.loads(data)
-    else:
-        raise httplib.HTTPException("Error in HTTP request (status: "+str(r1.status)+"):\n"+str(data))
+def pp_json(val):
+    ''' pretty print json string '''
+    return json.dumps(val, sort_keys=True,indent=4,separators=(',', ': '))
 
-def combine_positions_helper(pos1, pos2, multiplier):
+
+def demo(loglevel=1):
     '''
-    Return a new position that is the aggregation of pos1 and pos2. 
-
-    multiplier - +1 if the positions are in the same direction, -1 otherwise. 
+    loglevel - 1, 2, or 3 (as explained in module header)
     
-    (if multiplier is -1, pos1 must be the long position)
-    ''' 
-
-    # calculate the average price of the combined position
-    # (this is the weighted average of the average prices of the two positions)
-    total_price = pos1["units"] * pos1["avgPrice"] + pos2["units"] * pos2["avgPrice"]
-    total_units = pos1["units"] + pos2["units"]
-    avg_price = total_price / total_units
-    
-    # calculate the net number of units in the combined position
-    # and the determine the direction of the combined position
-    net_units = pos1["units"] + multiplier * pos2["units"]
-    new_direction = pos1["direction"]
-    if net_units < 0:
-        new_direction = "short"    # since pos1 is assumed to be long
-
-    # fill in the data for the new position
-    new_pos = {}
-    new_pos["direction"] = new_direction
-    new_pos["units"] = abs(net_units)
-    new_pos["avgPrice"] = avg_price
-    new_pos["instrument"] = pos1["instrument"]
-    return new_pos
-
-def combine_positions(pos1, pos2):
+    - query user fralcody for his accounts (there should be 3)
+    - open between 3 and 5 trades on each account  
+    - print the positions list for each account
+    - print the aggregate positions list across all accounts 
     '''
-    Return a new position that is the aggregation of pos1 and pos2. 
-    ''' 
-    if pos1["direction"] == pos2["direction"]:
-        return combine_positions_helper(pos1, pos2, 1)
-    elif pos1["direction"] == "long":
-        return combine_positions_helper(pos1, pos2, -1)
-    else:
-        return combine_positions_helper(pos2, pos1, -1)
-
-
-def aggregate_positions(username):
-    ''' 
-    Return the aggregate of all positions a user holds (across all accounts). 
-    
-    username - user whose positions are to be aggregated
-    ''' 
-
-    # retrieve the accounts owned by the given user
-    accounts = sandbox_request("GET","/v1/accounts?username="+username)
-
-    tmp_positions = {}          # for temporary storage of the aggregate positions
-
-    # aggregate the positions across each account
+    accounts = sandbox_request("GET","/v1/accounts?username=fralcody")
     for elt in accounts:
         acctid = elt["id"]
+        for i in range(random.randint(3,5)):
+            body = urllib.urlencode({'instrument':instruments[random.randint(0,1)],
+                    'units':random.randint(100,1000), 'direction':directions[random.randint(0,1)]})
+            trade = sandbox_request("POST","/accounts/"+str(acctid)+"/trades",body)
+            if loglevel == 3: print "Created trade on account id "+str(acctid)
+            if loglevel == 3: print '-----------------------------------------' 
+            if loglevel == 3: print pp_json(trade)
+            if loglevel == 3: print '-----------------------------------------' 
         positions = sandbox_request("GET", "/v1/accounts/"+str(acctid)+"/positions")
-        for pos in positions["positions"]:
-            instrument = pos["instrument"]
-            if tmp_positions.has_key(instrument):
-                tmp_positions[instrument] = combine_positions(tmp_positions[instrument], pos)
-            else:
-                tmp_positions[instrument] = pos
+        if loglevel >= 2: print "Positions on account id "+str(acctid)
+        if loglevel >= 2: print '-----------------------------------------' 
+        if loglevel >= 2: print pp_json(positions)
+        if loglevel >= 2: print '-----------------------------------------' 
+    print
+    print
+    print 'Aggregate positions across all accounts owned by fralcody:'
+    print '==========================================================' 
+    print pp_json(aggregate_positions('fralcody'))
+        
+    
 
-    aggregated_pos = {}
-    aggregated_pos["positions"] = []
-    for instrument in tmp_positions:
-        aggregated_pos["positions"].append(tmp_positions[instrument])
+if __name__ == '__main__':
+    
+    argc = len(sys.argv)
+    loglevel = 1
+    if argc > 1: 
+        loglevel = int(sys.argv[1])
+    demo(loglevel)
 
-    return aggregated_pos
+
