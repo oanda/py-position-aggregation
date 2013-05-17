@@ -21,8 +21,8 @@ import json
 import urllib
 import random
 
-instruments = ["EUR/USD","USD/CAD"]
-directions = ["long","short"]
+instruments = ["EUR_USD","USD_CAD"]
+directions = ["buy","sell"]
 
 def pp_json(val):
     ''' pretty print json string '''
@@ -38,19 +38,23 @@ def demo(loglevel=1):
     - print the positions list for each account
     - print the aggregate positions list across all accounts 
     '''
-    accounts = sandbox_request("GET","/v1/accounts?username=fralcody")
-    for elt in accounts:
-        acctid = elt["id"]
+    account1 = (sandbox_request("POST", "/v1/accounts"))['accountId']
+    account2 = (sandbox_request("POST", "/v1/accounts"))['accountId']
+    account3 = (sandbox_request("POST", "/v1/accounts"))['accountId']
+    #accounts = sandbox_request("GET","/v1/accounts")
+    accounts = [ account1, account2, account3 ]
+    for accId in accounts:
+        #acctid = elt["id"]
         for i in range(random.randint(3,5)):
             body = urllib.urlencode({'instrument':instruments[random.randint(0,1)],
-                    'units':random.randint(100,1000), 'direction':directions[random.randint(0,1)]})
-            trade = sandbox_request("POST","/accounts/"+str(acctid)+"/trades",body)
-            if loglevel == 3: print "Created trade on account id "+str(acctid)
+                    'units':random.randint(100,1000), 'side':directions[random.randint(0,1)]})
+            trade = sandbox_request("POST","/v1/accounts/"+str(accId)+"/trades",body)
+            if loglevel == 3: print "Created trade on account id "+str(accId)
             if loglevel == 3: print '-----------------------------------------' 
             if loglevel == 3: print pp_json(trade)
             if loglevel == 3: print '-----------------------------------------' 
-        positions = sandbox_request("GET", "/v1/accounts/"+str(acctid)+"/positions")
-        if loglevel >= 2: print "Positions on account id "+str(acctid)
+        positions = sandbox_request("GET", "/v1/accounts/"+str(accId)+"/positions")
+        if loglevel >= 2: print "Positions on account id "+str(accId)
         if loglevel >= 2: print '-----------------------------------------' 
         if loglevel >= 2: print pp_json(positions)
         if loglevel >= 2: print '-----------------------------------------' 
@@ -58,7 +62,7 @@ def demo(loglevel=1):
     print
     print 'Aggregate positions across all accounts owned by fralcody:'
     print '==========================================================' 
-    print pp_json(aggregate_positions('fralcody'))
+    print pp_json(aggregate_positions(accounts))
         
     
 
@@ -69,5 +73,3 @@ if __name__ == '__main__':
     if argc > 1: 
         loglevel = int(sys.argv[1])
     demo(loglevel)
-
-
