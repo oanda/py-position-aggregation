@@ -15,11 +15,13 @@ def sandbox_request(method, uri, body=None):
     body - optional body for POST requests
     ''' 
     conn = httplib.HTTPConnection("api-sandbox.oanda.com")
-    if body is not None: conn.request(method,uri,body)
+    headers = {"Content-type": "application/x-www-form-urlencoded",
+              "Accept": "text/plain"}
+    if body is not None: conn.request(method,uri,body,headers)
     else: conn.request(method,uri)
     r1 = conn.getresponse()
     data = r1.read()
-    if r1.status == 200:
+    if r1.status == 201 or r1.status == 200:
         return json.loads(data)
     else:
         raise httplib.HTTPException("Error in HTTP request (status: "+str(r1.status)+"):\n"+str(data))
@@ -28,9 +30,9 @@ def combine_positions_helper(pos1, pos2, multiplier):
     '''
     Return a new position that is the aggregation of pos1 and pos2. 
 
-    multiplier - +1 if the positions are in the same direction, -1 otherwise. 
+    multiplier - +1 if the positions are in the same side, -1 otherwise. 
     
-    (if multiplier is -1, pos1 must be the long position)
+    (if multiplier is -1, pos1 must be the buy position)
     ''' 
 
     # calculate the average price of the combined position
@@ -40,15 +42,15 @@ def combine_positions_helper(pos1, pos2, multiplier):
     avg_price = total_price / total_units
     
     # calculate the net number of units in the combined position
-    # and the determine the direction of the combined position
+    # and the determine the side of the combined position
     net_units = pos1["units"] + multiplier * pos2["units"]
-    new_direction = pos1["direction"]
+    new_side = pos1["side"]
     if net_units < 0:
-        new_direction = "short"    # since pos1 is assumed to be long
+        new_side = "sell"    # since pos1 is assumed to be buy
 
     # fill in the data for the new position
     new_pos = {}
-    new_pos["direction"] = new_direction
+    new_pos["side"] = new_side
     new_pos["units"] = abs(net_units)
     new_pos["avgPrice"] = avg_price
     new_pos["instrument"] = pos1["instrument"]
@@ -58,15 +60,19 @@ def combine_positions(pos1, pos2):
     '''
     Return a new position that is the aggregation of pos1 and pos2. 
     ''' 
-    if pos1["direction"] == pos2["direction"]:
+    if pos1["side"] == pos2["side"]:
         return combine_positions_helper(pos1, pos2, 1)
-    elif pos1["direction"] == "long":
+    elif pos1["side"] == "buy":
         return combine_positions_helper(pos1, pos2, -1)
     else:
         return combine_positions_helper(pos2, pos1, -1)
 
 
-def aggregate_positions(username):
+#def aggregate_positions(username):
+#new API does not support grabbing all accounts from a given username
+#will support grabbing all accounts available to a provided access token in the future
+#for now, pass all accounts in an array
+def aggregate_positions(accounts):
     ''' 
     Return the aggregate of all positions a user holds (across all accounts). 
     
@@ -74,14 +80,13 @@ def aggregate_positions(username):
     ''' 
 
     # retrieve the accounts owned by the given user
-    accounts = sandbox_request("GET","/v1/accounts?username="+username)
+    #accounts = sandbox_request("GET","/v1/accounts")
 
     tmp_positions = {}          # for temporary storage of the aggregate positions
 
     # aggregate the positions across each account
-    for elt in accounts:
-        acctid = elt["id"]
-        positions = sandbox_request("GET", "/v1/accounts/"+str(acctid)+"/positions")
+    for accId in accounts:
+        positions = sandbox_request("GET", "/v1/accounts/"+str(accId)+"/positions")
         for pos in positions["positions"]:
             instrument = pos["instrument"]
             if tmp_positions.has_key(instrument):
