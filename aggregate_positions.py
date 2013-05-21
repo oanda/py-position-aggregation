@@ -67,20 +67,12 @@ def combine_positions(pos1, pos2):
     else:
         return combine_positions_helper(pos2, pos1, -1)
 
-
-#def aggregate_positions(username):
-#new API does not support grabbing all accounts from a given username
-#will support grabbing all accounts available to a provided access token in the future
-#for now, pass all accounts in an array
 def aggregate_positions(accounts):
     ''' 
     Return the aggregate of all positions a user holds (across all accounts). 
     
     username - user whose positions are to be aggregated
     ''' 
-
-    # retrieve the accounts owned by the given user
-    #accounts = sandbox_request("GET","/v1/accounts")
 
     tmp_positions = {}          # for temporary storage of the aggregate positions
 
