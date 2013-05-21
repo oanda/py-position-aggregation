@@ -33,7 +33,7 @@ def demo(loglevel=1):
     '''
     loglevel - 1, 2, or 3 (as explained in module header)
     
-    - query user fralcody for his accounts (there should be 3)
+    - create 3 accounts
     - open between 3 and 5 trades on each account  
     - print the positions list for each account
     - print the aggregate positions list across all accounts 
@@ -41,10 +41,8 @@ def demo(loglevel=1):
     account1 = (sandbox_request("POST", "/v1/accounts"))['accountId']
     account2 = (sandbox_request("POST", "/v1/accounts"))['accountId']
     account3 = (sandbox_request("POST", "/v1/accounts"))['accountId']
-    #accounts = sandbox_request("GET","/v1/accounts")
     accounts = [ account1, account2, account3 ]
     for accId in accounts:
-        #acctid = elt["id"]
         for i in range(random.randint(3,5)):
             body = urllib.urlencode({'instrument':instruments[random.randint(0,1)],
                     'units':random.randint(100,1000), 'side':directions[random.randint(0,1)]})
@@ -60,7 +58,7 @@ def demo(loglevel=1):
         if loglevel >= 2: print '-----------------------------------------' 
     print
     print
-    print 'Aggregate positions across all accounts owned by fralcody:'
+    print 'Aggregate positions across all accounts:'
     print '==========================================================' 
     print pp_json(aggregate_positions(accounts))
         
