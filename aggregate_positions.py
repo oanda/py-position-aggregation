@@ -17,8 +17,7 @@ def sandbox_request(method, uri, body=None):
     conn = httplib.HTTPConnection("api-sandbox.oanda.com")
     headers = {"Content-type": "application/x-www-form-urlencoded",
               "Accept": "text/plain"}
-    if body is not None: conn.request(method,uri,body,headers)
-    else: conn.request(method,uri)
+    conn.request(method,uri,body,headers)
     r1 = conn.getresponse()
     data = r1.read()
     if r1.status == 201 or r1.status == 200:
