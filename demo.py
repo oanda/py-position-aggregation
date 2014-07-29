@@ -45,8 +45,8 @@ def demo(loglevel=1):
     for accId in accounts:
         for i in range(random.randint(3,5)):
             body = urllib.urlencode({'instrument':instruments[random.randint(0,1)],
-                    'units':random.randint(100,1000), 'side':directions[random.randint(0,1)]})
-            trade = sandbox_request("POST","/v1/accounts/"+str(accId)+"/trades",body)
+                'units':random.randint(100,1000), 'side':directions[random.randint(0,1)], 'type':'market'})
+            trade = sandbox_request("POST","/v1/accounts/"+str(accId)+"/orders",body)
             if loglevel == 3: print "Created trade on account id "+str(accId)
             if loglevel == 3: print '-----------------------------------------' 
             if loglevel == 3: print pp_json(trade)
